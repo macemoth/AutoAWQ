@@ -8,7 +8,6 @@ def get_calib_dataset(
     data: Union[str, List[str], List[List[int]]] = "pileval",
     tokenizer=None,
     n_samples=128,
-    min_seq_len=128,
     max_seq_len=512,
     split="train",
     text_column="text",
@@ -48,7 +47,7 @@ def get_calib_dataset(
             line = data[text_column]
             line = line.strip()
             line_encoded = tokenizer.encode(line)
-        if len(line_encoded) > max_seq_len or len(line_encoded) < min_seq_len:
+        if len(line_encoded) > max_seq_len:
             continue
         sample = torch.tensor([line_encoded])
         if sample.numel() == 0:
