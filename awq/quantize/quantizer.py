@@ -372,6 +372,11 @@ class AwqQuantizer:
             # create new scales
             ratio = ratio / n_grid
 
+            assert not torch.isnan(x_mean).any(), "NaN detected in x_mean"
+            assert not torch.isnan(w_mean).any(), "NaN detected in w_mean"
+            assert not torch.isinf(x_mean).any(), "Inf detected in x_mean"
+            assert not torch.isinf(w_mean).any(), "Inf detected in w_mean"
+
             # NOTE: s^-1 * x is fused here, according to paper
             if self.duo_scaling:
                 scales = (x_mean.pow(ratio) / (w_mean.pow(1 - ratio) + 1e-4)).clamp(min=1e-4)
@@ -381,6 +386,8 @@ class AwqQuantizer:
             scales_view = scales.view(1, -1).to(device)
 
             # avoid scaling values that overflow
+            assert torch.isnan(scales).sum() == 0, "NaN detected in scales"
+            assert torch.isinf(scales).sum() == 0, "Inf detected in scales"
             scales[torch.isinf(scales)] = 1
             scales[torch.isnan(scales)] = 1
 
@@ -393,6 +400,10 @@ class AwqQuantizer:
 
             # W * X
             int_w_output = self._module_forward(x, module2inspect, kwargs)
+            assert not torch.isnan(fp16_output).any(), "NaN detected in fp16_output"
+            assert not torch.isnan(int_w_output).any(), "NaN detected in int_w_output"
+            assert not torch.isinf(fp16_output).any(), "Inf detected in fp16_output"
+            assert not torch.isinf(int_w_output).any(), "Inf detected in int_w_output"
 
             # compute mean squared error (L2 norm)
             loss = self._compute_loss(fp16_output, int_w_output, device)
@@ -440,6 +451,7 @@ class AwqQuantizer:
             loss += chunk_loss
 
         # Normalize the loss by the total number of elements
+        assert num_elements != 0, "num_elements is zero"
         loss /= num_elements
 
         return loss
